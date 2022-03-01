@@ -39,7 +39,7 @@
 static const char *TAG = "wifi softAP";
 
 
-//TODO:Make server_web
+//TODO: install esp-idf-4.4 and review WEBSERVER-RESTFULL
 
 /* An HTTP GET handler */
 
