@@ -34,7 +34,7 @@
 #define EXAMPLE_ESP_WIFI_SSID      CONFIG_ESP_WIFI_SSID
 #define EXAMPLE_ESP_WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
 #define EXAMPLE_MAX_STA_CONN       CONFIG_ESP_MAX_STA_CONN
-#define BLINK_GPIO BLINK_GPIO
+#define BLINK_GPIO 2
 
 static const char *TAG = "wifi softAP";
 
@@ -48,7 +48,7 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
     esp_err_t error;
     ESP_LOGI(TAG,"Led turned off");
     const char *response = (const char *) req->user_ctx;
-    error=httpd_resp_send(req,response,strlen(response));
+    error=httpd_resp_send(req,response, strlen(response));
     if(error !=ESP_OK){
     	ESP_LOGI(TAG,"Error %d while sending Responsee",error);
     }
@@ -178,9 +178,10 @@ void app_main()
     ESP_LOGI(TAG, "ESP_WIFI_MODE_AP");
     wifi_init_softap();
     //http
-    tcpip_adapter_init();
+//    tcpip_adapter_init();
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_AP_STAIPASSIGNED, &connect_handler, &server));
 //    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &disconnect_handler, &server));
+//    server = start_webserver();
 
     gpio_pad_select_gpio(BLINK_GPIO);
    //  Set the GPIO as a push/pull output
@@ -188,18 +189,17 @@ void app_main()
     printf("no\n");
     while(1) {
         // Blink off (output low)
-    	printf("Turning off the LED  \n" );
+//    	printf("Turning off the LED  \n" );
         gpio_set_level(BLINK_GPIO, 0);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 
       //   Blink on (output high)
-        printf("Turning on the LED  \n");
+//        printf("Turning on the LED  \n");
         gpio_set_level(BLINK_GPIO, 1);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 
 }
-
 
 
 
