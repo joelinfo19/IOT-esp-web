@@ -20,6 +20,12 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
+
+#include <sys/param.h>
+#include "tcpip_adapter.h"
+
+#include <esp_http_server.h>
+
 /* The examples use WiFi configuration that you can set via project configuration menu.
 
    If you'd rather not, just change the below entries to strings with
@@ -35,6 +41,80 @@ static const char *TAG = "wifi softAP";
 
 //TODO:Make server_web
 
+/* An HTTP GET handler */
+
+static esp_err_t hello_get_handler(httpd_req_t *req)
+{
+    esp_err_t error;
+    ESP_LOGI(TAG,"Led turned off");
+    const char *response = (const char *) req->user_ctx;
+    error=httpd_resp_send(req,response,strlen(response));
+    if(error !=ESP_OK){
+    	ESP_LOGI(TAG,"Error %d while sending Responsee",error);
+    }
+    else ESP_LOGI(TAG,"REsponse sent Successfully");
+    return error;
+}
+static const httpd_uri_t hello = {
+    .uri       = "/hello",
+    .method    = HTTP_GET,
+    .handler   = hello_get_handler,
+    /* Let's pass response string in user
+     * context to demonstrate it's usage */
+    .user_ctx  = "Hello World!"
+};
+esp_err_t http_404_error_handler(httpd_req_t *req, httpd_err_code_t err)
+{
+
+    /* For any other URI send 404 and close socket */
+    httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Some 404 error message");
+    return ESP_FAIL;
+}
+
+static httpd_handle_t start_webserver(void)
+{
+    httpd_handle_t server = NULL;
+    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+
+    // Start the httpd server
+    ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
+    if (httpd_start(&server, &config) == ESP_OK) {
+        // Set URI handlers
+        ESP_LOGI(TAG, "Registering URI handlers");
+        httpd_register_uri_handler(server, &hello);
+
+        return server;
+    }
+
+    ESP_LOGI(TAG, "Error starting server!");
+    return NULL;
+}
+static void stop_webserver(httpd_handle_t server)
+{
+    // Stop the httpd server
+    httpd_stop(server);
+}
+static void disconnect_handler(void* arg, esp_event_base_t event_base,
+                               int32_t event_id, void* event_data)
+{
+    httpd_handle_t* server = (httpd_handle_t*) arg;
+    if (*server) {
+        ESP_LOGI(TAG, "Stopping webserver");
+        stop_webserver(*server);
+        *server = NULL;
+    }
+}
+
+static void connect_handler(void* arg, esp_event_base_t event_base,
+                            int32_t event_id, void* event_data)
+{
+    httpd_handle_t* server = (httpd_handle_t*) arg;
+    if (*server == NULL) {
+        ESP_LOGI(TAG, "Starting webserver");
+        *server = start_webserver();
+    }
+}
+// THIS IS A AP MODE CODE ESP32
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                                     int32_t event_id, void* event_data)
 {
@@ -82,7 +162,11 @@ void wifi_init_softap()
 
 void app_main()
 {
+    static httpd_handle_t server = NULL;
+
     //Initialize NVS
+
+    tcpip_adapter_init();
 
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -93,6 +177,11 @@ void app_main()
 
     ESP_LOGI(TAG, "ESP_WIFI_MODE_AP");
     wifi_init_softap();
+    //http
+    tcpip_adapter_init();
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_AP_STAIPASSIGNED, &connect_handler, &server));
+//    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &disconnect_handler, &server));
+
     gpio_pad_select_gpio(BLINK_GPIO);
    //  Set the GPIO as a push/pull output
     gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
