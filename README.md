@@ -1,4 +1,5 @@
-# WiFi softAP example
+# WiFi softAP example 
+# This example was made with version ESP-IDF-4.0
 
 (See the README.md file in the upper level 'examples' directory for more information about examples.)
 
